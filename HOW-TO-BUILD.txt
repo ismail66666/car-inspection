@@ -1,0 +1,31 @@
+CAR INSPECTION - ANDROID APP
+============================
+
+This folder is the complete Android project. Pick ONE way to turn it into an APK.
+
+OPTION A - On your PC with Android Studio (free)
+  1. Install Android Studio from developer.android.com/studio (accept the defaults).
+  2. Open Android Studio > Open > choose this CarInspection-Android folder.
+     The first time, it downloads what it needs. Wait until the bottom bar says it's done.
+  3. Menu: Build > Generate App Bundles or APKs > Generate APKs.
+  4. When it finishes, click "locate". The APK is in:
+       app\build\outputs\apk\debug\app-debug.apk
+
+OPTION B - In the cloud with GitHub (free, nothing to install)
+  1. Make a free account at github.com and create a new repository.
+  2. Upload everything in this folder (keep the folders as they are,
+     including the hidden .github folder).
+  3. Open the "Actions" tab. The "Build APK" job starts by itself
+     (or press "Run workflow").
+  4. When it shows a green check, open it and download "CarInspection-apk".
+     Unzip it to get the APK.
+
+INSTALLING ON A PHONE
+  - Send the APK to the phone (email, WhatsApp, Google Drive, USB cable).
+  - Tap it. Android asks to allow installing from this source: allow it, then Install.
+  - The same APK works on any Android 7.0 or newer phone, so you can share it with your techs.
+
+UPDATING THE APP LATER
+  - The inspection screen is app\src\main\assets\index.html.
+  - After changing anything, build again and install the new APK over the old one.
+    Inspections saved on the phone are kept.
