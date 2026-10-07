@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Inspection">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#eef0f2">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
+<title>Car Inspection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px)}
+html{background:var(--bg)}
+[hidden]{display:none!important}
+img{max-width:100%}
+/* Layout: one-column shop-floor tool. A sticky progress strip, big tap targets, checklist rows like an inspection tag. */
+:root{
+  --bg:#eef0f2; --card:#ffffff; --ink:#1b2430; --muted:#5d6876; --line:#d5dae0;
+  --accent:#e08a00; --accent-ink:#1b2430; --ok:#1f7a45; --ok-bg:#e3f3e9; --svc:#b4321f; --svc-bg:#fbe7e3;
+  --chip:#e4e8ec;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12161b; --card:#1b2129; --ink:#e7ebef; --muted:#9aa5b1; --line:#2c3540;
+  --accent:#f0a020; --accent-ink:#12161b; --ok:#4cc27e; --ok-bg:#16301f; --svc:#ff7a62; --svc-bg:#3a1c17; --chip:#26303b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161b; --card:#1b2129; --ink:#e7ebef; --muted:#9aa5b1; --line:#2c3540;
+  --accent:#f0a020; --accent-ink:#12161b; --ok:#4cc27e; --ok-bg:#16301f; --svc:#ff7a62; --svc-bg:#3a1c17; --chip:#26303b; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 var(--body);padding-inline:16px;padding-block:0 96px;-webkit-text-size-adjust:100%}
+.wrap{max-width:640px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);font-weight:700;letter-spacing:.01em;margin:0;text-wrap:balance}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:18px 10px}
+header.top h1{font-size:30px;line-height:1}
+.eyebrow{font:600 12px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:focus-visible,input:focus-visible,textarea:focus-visible,label.btn:focus-within{outline:3px solid var(--accent);outline-offset:2px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 18px;border-radius:10px;font-weight:600;background:var(--chip);color:var(--ink)}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent;border:1px solid var(--line)}
+.btn.danger{color:var(--svc)}
+.btn:disabled{opacity:.5;cursor:default}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+.banner{background:var(--svc-bg);color:var(--svc);border-radius:10px;padding:10px 12px;font-size:14px}
+
+/* list */
+.list{display:flex;flex-direction:column;gap:10px}
+.row{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;text-align:left;width:100%;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.row .t{font:700 20px/1.1 var(--display);min-width:0}
+.row .s{font-size:14px;color:var(--muted);min-width:0}
+.vin{font-family:var(--mono);font-size:14px;letter-spacing:.04em}
+.pill{display:inline-block;font:600 12px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;padding:6px 8px;border-radius:999px;background:var(--chip);color:var(--muted);white-space:nowrap}
+.pill.svc{background:var(--svc-bg);color:var(--svc)}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}
+.empty{text-align:center;padding:28px 16px}
+.steps{display:grid;gap:10px;text-align:left;margin:16px auto 0;max-width:360px;padding:0;list-style:none;counter-reset:s}
+.steps li{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;counter-increment:s}
+.steps li::before{content:counter(s);display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--chip);font:700 15px var(--display)}
+
+/* inspection screen */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:12px 10px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--line);margin-inline:-16px;padding-inline:16px}
+.bar .line1{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.meter{height:8px;border-radius:99px;background:var(--chip);overflow:hidden;display:flex}
+.meter i{display:block;height:100%}
+.meter .m-ok{background:var(--ok)} .meter .m-svc{background:var(--svc)}
+.counts{display:flex;gap:14px;font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.counts b{color:var(--ink)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:420px){.grid2{grid-template-columns:1fr}}
+label.f,div.f{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--muted);min-width:0}
+input,textarea{font:16px var(--body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%;min-width:0}
+textarea{min-height:80px;resize:vertical}
+.vinrow{display:flex;gap:8px}
+.vinrow input{font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase}
+.vinmsg{font-size:14px;min-height:20px}
+.vinmsg.busy{color:var(--muted)}
+.vinhint{font-size:13px;color:var(--muted)}
+.vinmsg.bad{color:var(--svc)} .vinmsg.good{color:var(--ok)}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:8px}
+.sec-h h2{font-size:24px}
+
+.pts{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.pt{padding:12px 14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.pt:first-child{border-top:0}
+.pt[data-s="ok"]{background:linear-gradient(90deg,var(--ok-bg),transparent 55%)}
+.pt[data-s="service"]{background:linear-gradient(90deg,var(--svc-bg),transparent 70%)}
+.pt-head{display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:center}
+.pt-no{font:600 13px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.pt-name{font-weight:600;min-width:0}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{min-height:42px;min-width:52px;padding:0 10px;font-weight:600;font-size:14px;background:var(--card)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg .b-ok[aria-pressed="true"]{background:var(--ok);color:#fff}
+.seg .b-svc[aria-pressed="true"]{background:var(--svc);color:#fff}
+.pt-more{display:flex;gap:8px;align-items:center}
+.pt-more input{flex:1}
+.camb{flex:none;width:46px;height:46px;border-radius:10px;background:var(--chip);display:grid;place-items:center;position:relative;cursor:pointer}
+.camb input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.camb svg{width:22px;height:22px;stroke:var(--ink)}
+.thumbs{display:flex;flex-wrap:wrap;gap:8px}
+.thumb{position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;background:var(--chip)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb button{position:absolute;top:2px;right:2px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:14px;line-height:24px}
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+.foot{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));z-index:6}
+.foot .wrap{display:flex;gap:10px}
+.foot .btn{flex:1}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:9;max-width:calc(100% - 32px)}
+.viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:20;display:grid;place-items:center;padding:16px}
+.viewer img{max-height:90%;border-radius:8px}
+@media (prefers-reduced-motion:no-preference){.pt{transition:background-color .15s}}
+</style>
+
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast" hidden></div>
+<div class="viewer" id="viewer" hidden><img id="viewerImg" alt="Photo"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
+<script>
+const POINTS=["Windows","Wiper blades","Rear view mirrors","Head/tail lights","Wheels/tires","Body/molding","Remote locking","Car batteries","Dashboard lights","A/C & heat","Radio","Backup camera","Navigation","Jack","Spare tire","Loose buttons","Broken fixtures","Detail","Brake/signal/headlights","DEF fluid","Muffler","Test drive","Gas (Above 50%)"];
+
+/* ---------- VIN (offline) ---------- */
+const WMI={"1FA":"Ford","1FB":"Ford","1FC":"Ford","1FD":"Ford","1FM":"Ford","1FT":"Ford","1FU":"Freightliner","1FV":"Freightliner","2FA":"Ford","2FM":"Ford","2FT":"Ford","3FA":"Ford","3FM":"Ford","3FT":"Ford","1LN":"Lincoln","2LM":"Lincoln","5LM":"Lincoln","1ME":"Mercury",
+"1G1":"Chevrolet","1GC":"Chevrolet","1GN":"Chevrolet","1GB":"Chevrolet","2G1":"Chevrolet","3G1":"Chevrolet","3GC":"Chevrolet","3GN":"Chevrolet","KL1":"Chevrolet","KL7":"Chevrolet","1GT":"GMC","2GT":"GMC","3GT":"GMC","1GK":"GMC","1G4":"Buick","2G4":"Buick","KL4":"Buick","5GA":"Buick","1G6":"Cadillac","1GY":"Cadillac","1G2":"Pontiac","1G8":"Saturn",
+"1C3":"Chrysler","2C3":"Chrysler","2C4":"Chrysler","1C4":"Jeep/Chrysler","1J4":"Jeep","1J8":"Jeep","3C4":"Chrysler","1B3":"Dodge","2B3":"Dodge","1D7":"Dodge/Ram","3D7":"Dodge/Ram","2D4":"Dodge","2D3":"Dodge","1C6":"Ram","3C6":"Ram","3C7":"Ram","ZACC":"Jeep",
+"1HG":"Honda","2HG":"Honda","2HK":"Honda","5FN":"Honda","5J6":"Honda","JHM":"Honda","SHH":"Honda","19X":"Honda","JHL":"Honda","5KB":"Honda","19U":"Acura","JH4":"Acura","5J8":"Acura",
+"JTD":"Toyota","JTE":"Toyota","JTM":"Toyota","JTN":"Toyota","JTK":"Toyota","JTL":"Toyota","JTH":"Lexus","JTJ":"Lexus","2T1":"Toyota","2T2":"Lexus","2T3":"Toyota","4T1":"Toyota","4T3":"Toyota","4T4":"Toyota","5TD":"Toyota","5TF":"Toyota","5TE":"Toyota","5YF":"Toyota","58A":"Lexus",
+"JN1":"Nissan","JN8":"Nissan","1N4":"Nissan","1N6":"Nissan","3N1":"Nissan","3N6":"Nissan","5N1":"Nissan","JNK":"Infiniti","JNR":"Infiniti","5N3":"Infiniti",
+"KMH":"Hyundai","5NP":"Hyundai","5NM":"Hyundai","KM8":"Hyundai","3KP":"Kia","KNA":"Kia","KND":"Kia","5XX":"Kia","5XY":"Kia","KMT":"Genesis",
+"JF1":"Subaru","JF2":"Subaru","4S3":"Subaru","4S4":"Subaru","JM1":"Mazda","JM3":"Mazda","3MZ":"Mazda","3MV":"Mazda","JA3":"Mitsubishi","JA4":"Mitsubishi","ML3":"Mitsubishi",
+"WBA":"BMW","WBS":"BMW","WBX":"BMW","5UX":"BMW","5UJ":"BMW","4US":"BMW","WMW":"MINI","WDD":"Mercedes-Benz","WDB":"Mercedes-Benz","WDC":"Mercedes-Benz","W1K":"Mercedes-Benz","W1N":"Mercedes-Benz","4JG":"Mercedes-Benz","55S":"Mercedes-Benz","WD3":"Mercedes-Benz",
+"WAU":"Audi","WA1":"Audi","WUA":"Audi","WVW":"Volkswagen","WVG":"Volkswagen","3VW":"Volkswagen","1VW":"Volkswagen","3VV":"Volkswagen","WP0":"Porsche","WP1":"Porsche","YV1":"Volvo","YV4":"Volvo","7JR":"Volvo","SAL":"Land Rover","SAJ":"Jaguar","ZFF":"Ferrari","ZAR":"Alfa Romeo","3FF":"Fiat","ZFB":"Fiat",
+"5YJ":"Tesla","7SA":"Tesla","LRW":"Tesla","7G2":"Tesla","5YM":"Tesla","1GG":"Isuzu","JAL":"Isuzu","7FA":"Honda","5L1":"Lincoln","2HN":"Acura","KNM":"Renault Samsung","LVS":"Ford (China)"};
+const TRANS={A:1,B:2,C:3,D:4,E:5,F:6,G:7,H:8,J:1,K:2,L:3,M:4,N:5,P:7,R:9,S:2,T:3,U:4,V:5,W:6,X:7,Y:8,Z:9};
+const WEIGHTS=[8,7,6,5,4,3,2,10,0,9,8,7,6,5,4,3,2];
+const YEARCODES="ABCDEFGHJKLMNPRSTVWXY123456789";
+function cleanVin(v){return (v||"").toUpperCase().replace(/[^A-Z0-9]/g,"").replace(/[IOQ]/g,"").slice(0,17)}
+function checkDigitOk(v){
+  if(v.length!==17)return false;
+  let sum=0;for(let i=0;i<17;i++){const c=v[i];const n=/\d/.test(c)?+c:TRANS[c];if(n===undefined)return false;sum+=n*WEIGHTS[i]}
+  const r=sum%11,want=r===10?"X":String(r);return v[8]===want;
+}
+function decodeVin(v){
+  const out={make:"",year:""};
+  out.make=WMI[v.slice(0,4)]||WMI[v.slice(0,3)]||"";
+  const yc=v[9],idx=YEARCODES.indexOf(yc);
+  if(idx>=0){
+    let y=1980+idx; // 1980-2009 cycle
+    if(/[A-Z]/.test(v[6]))y+=30; // pos 7 letter => 2010-2039 (North American cars)
+    const max=new Date().getFullYear()+1;
+    if(y>max)y-=30;
+    out.year=String(y);
+  }
+  return out;
+}
+
+/* ---------- storage (IndexedDB, with memory fallback) ---------- */
+let idb=null,memOnly=false;const mem={insp:new Map(),photos:new Map()};
+function openDB(){return new Promise(res=>{
+  try{const r=indexedDB.open("car-inspection",1);
+    r.onupgradeneeded=()=>{const d=r.result;d.createObjectStore("insp",{keyPath:"id"});const p=d.createObjectStore("photos",{keyPath:"id"});p.createIndex("insp","insp")};
+    r.onsuccess=()=>{idb=r.result;res()};r.onerror=()=>{memOnly=true;res()};
+  }catch(e){memOnly=true;res()}
+})}
+function tx(store,mode,fn){return new Promise((res,rej)=>{
+  if(memOnly){try{res(fn(null))}catch(e){rej(e)}return}
+  try{const t=idb.transaction(store,mode);const s=t.objectStore(store);const r=fn(s);t.oncomplete=()=>res(r&&r.result!==undefined?r.result:r);t.onerror=()=>rej(t.error)}catch(e){rej(e)}
+})}
+const store={
+  async all(){if(memOnly)return [...mem.insp.values()];return tx("insp","readonly",s=>s.getAll())},
+  async put(o){if(memOnly){mem.insp.set(o.id,o);return}return tx("insp","readwrite",s=>s.put(o))},
+  async del(id){if(memOnly){mem.insp.delete(id);for(const[k,p]of mem.photos)if(p.insp===id)mem.photos.delete(k);return}
+    await tx("insp","readwrite",s=>s.delete(id));
+    const ps=await store.photosFor(id);for(const p of ps)await store.delPhoto(p.id)},
+  async putPhoto(p){if(memOnly){mem.photos.set(p.id,p);return}return tx("photos","readwrite",s=>s.put(p))},
+  async delPhoto(id){if(memOnly){mem.photos.delete(id);return}return tx("photos","readwrite",s=>s.delete(id))},
+  async photosFor(inspId){if(memOnly)return [...mem.photos.values()].filter(p=>p.insp===inspId);return tx("photos","readonly",s=>s.index("insp").getAll(inspId))}
+};
+
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const pad=n=>String(n).padStart(2,"0");
+function stamp(d=new Date()){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+let toastT;function toast(msg){const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600)}
+function counts(i){let ok=0,svc=0;for(const p of POINTS){const s=i.items[p]?.status;if(s==="ok")ok++;else if(s==="service")svc++}return{ok,svc,left:POINTS.length-ok-svc}}
+function title(i){return [i.year,i.make,i.model].filter(Boolean).join(" ")||"New vehicle"}
+function blank(){const items={};POINTS.forEach(p=>items[p]={status:"",note:"",photos:[]});return{id:uid(),created:stamp(),updated:stamp(),exported:"",vin:"",year:"",make:"",model:"",trim:"",color:"",mileage:"",items,comments:"",photos:[]}}
+
+async function shrink(file){
+  const url=URL.createObjectURL(file);
+  try{
+    const img=await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=url});
+    const max=1600,sc=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
+    const c=document.createElement("canvas");c.width=Math.round(img.naturalWidth*sc);c.height=Math.round(img.naturalHeight*sc);
+    c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+    return await new Promise(res=>c.toBlob(b=>res(b||file),"image/jpeg",0.78));
+  }catch(e){return file}finally{URL.revokeObjectURL(url)}
+}
+const blobTo64=b=>new Promise(res=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]);r.readAsDataURL(b)});
+
+/* ---------- state ---------- */
+let list=[],cur=null,photoMap=new Map(),urls=new Map(),saveT,pendingDelete=null;
+function urlFor(id){if(!urls.has(id)){const p=photoMap.get(id);if(!p)return"";urls.set(id,URL.createObjectURL(p.blob))}return urls.get(id)}
+function save(){cur.updated=stamp();clearTimeout(saveT);saveT=setTimeout(()=>store.put(structuredClone(cur)).catch(()=>{}),300)}
+
+/* ---------- list screen ---------- */
+async function showList(){
+  if(cur){clearTimeout(saveT);await store.put(structuredClone(cur)).catch(()=>{})}
+  cur=null;for(const u of urls.values())URL.revokeObjectURL(u);urls.clear();photoMap.clear();
+  list=(await store.all().catch(()=>[])).sort((a,b)=>b.updated.localeCompare(a.updated));
+  const warn=memOnly?`<div class="banner">This browser isn't letting the page save on the phone. Inspections will be lost when you close it, so export before leaving.</div>`:"";
+  const rows=list.map(i=>{const c=counts(i);const tag=c.left?`<span class="pill">${c.left} left</span>`:c.svc?`<span class="pill svc">${c.svc} service</span>`:`<span class="pill ok">All OK</span>`;
+    return `<button class="row" data-open="${i.id}"><span class="t">${esc(title(i))}</span>${tag}<span class="s"><span class="vin">${esc(i.vin?i.vin.slice(-6):"No VIN")}</span> · ${esc(i.created)}</span><span class="s">${i.exported?"Exported":"Not exported"}</span></button>`}).join("");
+  $("#app").innerHTML=`
+    <header class="top"><div class="stack" style="gap:6px"><span class="eyebrow">23-point check</span><h1>Car Inspection</h1></div>
+      <button class="btn primary" id="newBtn">New inspection</button></header>
+    ${warn}
+    ${list.length?`<div class="list">${rows}</div>`:`
+      <div class="card empty"><h2 style="font-size:24px">No inspections on this phone yet</h2>
+        <ol class="steps"><li>Enter the VIN. Year and make fill in from it.</li><li>Walk the car and mark each of the 23 points OK or Service. Add a note or photo where needed.</li><li>Export the file to your cloud folder and import it into Car Inventory on the PC.</li></ol>
+        <div style="margin-top:18px"><button class="btn primary" id="newBtn2">Start an inspection</button></div></div>`}`;
+  document.querySelectorAll("#newBtn,#newBtn2").forEach(b=>b.onclick=()=>{const i=blank();store.put(i).catch(()=>{});openInsp(i)});
+  document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>openInsp(list.find(i=>i.id===b.dataset.open)));
+  $("#foot")?.remove();window.scrollTo(0,0);
+}
+
+/* ---------- inspection screen ---------- */
+async function openInsp(i){
+  cur=structuredClone(i);
+  POINTS.forEach(p=>{cur.items[p]??={status:"",note:"",photos:[]};cur.items[p].photos??=[]});
+  photoMap.clear();(await store.photosFor(cur.id).catch(()=>[])).forEach(p=>photoMap.set(p.id,p));
+  pendingDelete=null;render();window.scrollTo(0,0);
+}
+function thumbs(ids){return ids.filter(id=>photoMap.has(id)).map(id=>`<div class="thumb"><img src="${urlFor(id)}" alt="Inspection photo" data-view="${id}"><button aria-label="Remove photo" data-rmphoto="${id}">✕</button></div>`).join("")}
+const CAM=`<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>`;
+function ptRow(p,n){const it=cur.items[p];const open=it.status==="service"||it.note||it.photos.length;
+  return `<div class="pt" data-pt="${n}" data-s="${it.status}">
+    <div class="pt-head"><span class="pt-no">${pad(n+1)}</span><span class="pt-name">${esc(p)}</span>
+      <div class="seg" role="group" aria-label="${esc(p)}"><button class="b-ok" data-set="ok" aria-pressed="${it.status==="ok"}">OK</button><button class="b-svc" data-set="service" aria-pressed="${it.status==="service"}">Service</button></div></div>
+    <div class="pt-more" ${open?"":"hidden"}><input id="note-${n}" placeholder="Note, e.g. replace both" value="${esc(it.note)}" data-note>
+      <label class="camb" aria-label="Add photo">${CAM}<input type="file" accept="image/*" data-photo></label></div>
+    <div class="thumbs">${thumbs(it.photos)}</div>
+    ${open?"":`<button class="small muted" data-addnote style="text-align:left;padding:0">+ Note or photo</button>`}
+  </div>`}
+function render(){
+  const i=cur;
+  $("#app").innerHTML=`
+    <div class="bar"><div class="line1"><button class="btn ghost" id="back">‹ All inspections</button><span class="eyebrow" id="savedAt">Saved on phone</span></div>
+      <div class="meter" aria-hidden="true"><i class="m-ok"></i><i class="m-svc"></i></div>
+      <div class="counts" id="counts"></div></div>
+    <div class="stack" style="margin-top:16px">
+      ${memOnly?`<div class="banner">This browser isn't letting the page save. Export before you close it.</div>`:""}
+      <div class="card stack">
+        <span class="eyebrow">Vehicle</span>
+        <div class="f"><label for="vin">VIN</label><div class="vinrow"><label class="camb" aria-label="Scan VIN with camera" id="scanBtn">${CAM}<input type="file" accept="image/*" capture="environment" id="scanVin"></label><input id="vin" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="17" placeholder="17 characters" value="${esc(i.vin)}"><button class="btn" id="decode">Decode</button></div></div>
+        <div class="vinmsg" id="vinmsg"></div>
+        <div class="vinhint">Tap the camera to scan the VIN barcode on the door jamb sticker, or type the VIN.</div>
+        <div class="grid2">
+          <label class="f">Year<input id="year" inputmode="numeric" value="${esc(i.year)}"></label>
+          <label class="f">Make<input id="make" value="${esc(i.make)}"></label>
+          <label class="f">Model<input id="model" value="${esc(i.model)}"></label>
+          <label class="f">Trim<input id="trim" value="${esc(i.trim)}"></label>
+          <label class="f">Color<input id="color" value="${esc(i.color)}"></label>
+          <label class="f">Mileage<input id="mileage" inputmode="numeric" value="${esc(i.mileage)}"></label>
+        </div>
+      </div>
+      <div class="sec-h"><h2>Inspection points</h2><button class="btn ghost small" id="allok">Mark unchecked OK</button></div>
+      <div class="pts" id="pts">${POINTS.map(ptRow).join("")}</div>
+      <div class="card stack"><span class="eyebrow">Other comments</span>
+        <textarea id="comments" placeholder="Anything else you noticed">${esc(i.comments)}</textarea>
+        <div class="pt-more"><span class="muted small" style="flex:1">General photos</span><label class="camb" aria-label="Add general photo">${CAM}<input type="file" accept="image/*" id="genPhoto"></label></div>
+        <div class="thumbs" id="genThumbs">${thumbs(i.photos)}</div>
+      </div>
+      <div class="actions"><button class="btn danger ghost" id="del">Delete inspection</button></div>
+    </div>`;
+  $("#foot")?.remove();
+  const f=document.createElement("div");f.className="foot";f.id="foot";
+  f.innerHTML=`<div class="wrap"><button class="btn primary" id="export">Export for PC</button></div>`;document.body.appendChild(f);
+  $("#export").onclick=exportFile;
+  wire();updateCounts();vinStatus();
+}
+function updateCounts(){
+  const c=counts(cur),n=POINTS.length;
+  $(".m-ok").style.width=(c.ok/n*100)+"%";$(".m-svc").style.width=(c.svc/n*100)+"%";
+  $("#counts").innerHTML=`<span><b>${c.ok}</b> OK</span><span><b>${c.svc}</b> service</span><span><b>${c.left}</b> left</span>`;
+}
+function vinStatus(){
+  const v=cur.vin,m=$("#vinmsg");
+  if(!v){m.className="vinmsg muted";m.textContent="Type the VIN from the windshield or door jamb.";return}
+  if(v.length<17){m.className="vinmsg muted";m.textContent=`${v.length} of 17 characters`;return}
+  const okd=checkDigitOk(v);
+  m.className="vinmsg "+(okd?"good":"bad");
+  m.textContent=okd?"VIN checks out.":"Check digit doesn't match. Look for a typo (some imports fail this check).";
+}
+function wire(){
+  $("#back").onclick=showList;
+  const vin=$("#vin");
+  vin.oninput=()=>{const c=cleanVin(vin.value);if(vin.value!==c)vin.value=c;cur.vin=c;vinStatus();save();if(c.length===17)fillFromVin(false)};
+  $("#decode").onclick=()=>fillFromVin(true);
+  $("#scanVin").onchange=e=>scanVin(e.target);
+  if(window.AndroidBridge){const sb=$("#scanBtn");sb.querySelector("input").remove();sb.setAttribute("role","button");sb.tabIndex=0;sb.onclick=e=>{e.preventDefault();$("#vinmsg").className="vinmsg busy";$("#vinmsg").textContent="Opening the scanner…";AndroidBridge.scanVin()}}
+  ["year","make","model","trim","color","mileage"].forEach(k=>$("#"+k).oninput=e=>{cur[k]=e.target.value.trim();save()});
+  $("#comments").oninput=e=>{cur.comments=e.target.value;save()};
+  $("#allok").onclick=()=>{let n=0;POINTS.forEach((p,k)=>{if(!cur.items[p].status){cur.items[p].status="ok";n++;refreshPt(k)}});updateCounts();save();toast(n?`Marked ${n} points OK`:"Every point is already marked")};
+  $("#pts").addEventListener("click",e=>{
+    const row=e.target.closest(".pt");if(!row)return;const k=+row.dataset.pt,p=POINTS[k],it=cur.items[p];
+    const set=e.target.closest("[data-set]");
+    if(set){it.status=it.status===set.dataset.set?"":set.dataset.set;refreshPt(k);updateCounts();save();if(it.status==="service")row.querySelector("[data-note]")?.focus();return}
+    if(e.target.closest("[data-addnote]")){row.querySelector(".pt-more").hidden=false;e.target.closest("[data-addnote]").remove();row.querySelector("[data-note]").focus();return}
+    handlePhotoClick(e,it.photos,()=>refreshPt(k));
+  });
+  $("#pts").addEventListener("input",e=>{if(e.target.matches("[data-note]")){const k=+e.target.closest(".pt").dataset.pt;cur.items[POINTS[k]].note=e.target.value;save()}});
+  $("#pts").addEventListener("change",async e=>{if(e.target.matches("[data-photo]")){const k=+e.target.closest(".pt").dataset.pt;await addPhotos(e.target,cur.items[POINTS[k]].photos);refreshPt(k)}});
+  $("#genPhoto").onchange=async e=>{await addPhotos(e.target,cur.photos);$("#genThumbs").innerHTML=thumbs(cur.photos)};
+  $("#genThumbs").onclick=e=>handlePhotoClick(e,cur.photos,()=>$("#genThumbs").innerHTML=thumbs(cur.photos));
+  $("#del").onclick=async()=>{
+    if(pendingDelete!==cur.id){pendingDelete=cur.id;$("#del").textContent="Tap again to delete for good";setTimeout(()=>{if($("#del")){$("#del").textContent="Delete inspection";pendingDelete=null}},4000);return}
+    const id=cur.id;cur=null;await store.del(id).catch(()=>{});toast("Inspection deleted");showList();
+  };
+}
+function handlePhotoClick(e,arr,after){
+  const rm=e.target.closest("[data-rmphoto]");
+  if(rm){const id=rm.dataset.rmphoto;arr.splice(arr.indexOf(id),1);photoMap.delete(id);store.delPhoto(id).catch(()=>{});after();save();return}
+  const v=e.target.closest("[data-view]");if(v){$("#viewerImg").src=urlFor(v.dataset.view);$("#viewer").hidden=false}
+}
+$("#viewer").onclick=()=>$("#viewer").hidden=true;
+function refreshPt(k){
+  const old=document.querySelector(`.pt[data-pt="${k}"]`);const note=old.querySelector("[data-note]");const focused=document.activeElement===note;
+  const tmp=document.createElement("div");tmp.innerHTML=ptRow(POINTS[k],k);old.replaceWith(tmp.firstElementChild);
+  if(focused)document.querySelector(`#note-${k}`).focus();
+}
+async function addPhotos(input,arr){
+  const files=[...(input.files||[])];input.value="";
+  for(const f of files){const blob=await shrink(f);const p={id:uid(),insp:cur.id,blob};photoMap.set(p.id,p);arr.push(p.id);await store.putPhoto(p).catch(()=>{})}
+  if(files.length){save();toast(files.length>1?`${files.length} photos added`:"Photo added")}
+}
+async function nhtsa(vin){
+  const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),8000);
+  try{
+    const r=await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/${vin}?format=json`,{signal:ctl.signal});
+    if(!r.ok)return null;const j=await r.json();const x=j&&j.Results&&j.Results[0];if(!x)return null;
+    const tc=w=>String(w||"").trim().toLowerCase().replace(/\b([a-z])/g,c=>c.toUpperCase()).replace(/\bBmw\b/,"BMW").replace(/\bGmc\b/,"GMC").replace(/\bRam\b/,"Ram");
+    const make=x.Make?(x.Make.length<=4?x.Make.toUpperCase():tc(x.Make)):"";
+    return {year:x.ModelYear||"",make,model:(x.Model||"").trim(),trim:(x.Trim||x.Series||"").trim()};
+  }catch(e){return null}finally{clearTimeout(t)}
+}
+let decodingVin="";
+async function fillFromVin(manual){
+  const v=cur.vin;if(v.length!==17){if(manual)toast("Enter all 17 characters first");return}
+  if(decodingVin===v&&!manual)return;decodingVin=v;
+  const set=(k,val,force)=>{if(val&&(force||!cur[k])){cur[k]=val;const el=$("#"+k);if(el)el.value=val;return true}return false};
+  const off=decodeVin(v);
+  set("year",off.year,manual);set("make",off.make,manual);save();
+  const btn=$("#decode");if(btn){btn.disabled=true;btn.textContent="Decoding…"}
+  const on=navigator.onLine===false?null:await nhtsa(v);
+  if(btn&&btn.isConnected){btn.disabled=false;btn.textContent="Decode"}
+  if(!cur||cur.vin!==v)return;
+  if(on&&(on.make||on.model)){
+    const got=[];
+    if(set("year",on.year,true))got.push("year");if(set("make",on.make,true))got.push("make");
+    if(set("model",on.model,manual))got.push("model");if(set("trim",on.trim,manual))got.push("trim");
+    save();toast(on.model?`Decoded: ${[cur.year,cur.make,cur.model,cur.trim].filter(Boolean).join(" ")}`:"Decoded year and make. Model not listed for this VIN.");
+  }else if(manual||off.make){
+    toast(off.make?`No connection to the VIN database. Filled year and make offline.`:"No connection to the VIN database, and the make isn't recognized offline.");
+  }
+}
+
+/* ---------- VIN scanning ---------- */
+function vinFromText(t){
+  let raw=String(t||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+  // Door-jamb Code 39 barcodes often start with an extra "I" (import marker)
+  const cands=[];
+  for(let i=0;i+17<=raw.length;i++){const c=raw.slice(i,i+17);if(!/[IOQ]/.test(c))cands.push(c)}
+  return cands.find(checkDigitOk)||cands[0]||"";
+}
+function canvasFrom(img,maxSide,rot){
+  const sc=Math.min(1,maxSide/Math.max(img.naturalWidth,img.naturalHeight));
+  const w=Math.round(img.naturalWidth*sc),h=Math.round(img.naturalHeight*sc);
+  const c=document.createElement("canvas");const g=c.getContext("2d",{willReadFrequently:true});
+  if(rot){c.width=h;c.height=w;g.translate(h/2,w/2);g.rotate(Math.PI/2);g.drawImage(img,-w/2,-h/2,w,h)}
+  else{c.width=w;c.height=h;g.drawImage(img,0,0,w,h)}
+  return c;
+}
+function readBarcode(img){
+  const Z=window.ZXing;if(!Z||!Z.MultiFormatReader||!Z.RGBLuminanceSource)return "";
+  const hints=new Map();
+  hints.set(Z.DecodeHintType.POSSIBLE_FORMATS,[Z.BarcodeFormat.CODE_39,Z.BarcodeFormat.CODE_128,Z.BarcodeFormat.DATA_MATRIX,Z.BarcodeFormat.QR_CODE,Z.BarcodeFormat.PDF_417]);
+  hints.set(Z.DecodeHintType.TRY_HARDER,true);
+  const reader=new Z.MultiFormatReader();reader.setHints(hints);
+  for(const size of [1600,1000,2400])for(const rot of [false,true]){
+    try{
+      const c=canvasFrom(img,size,rot);const d=c.getContext("2d").getImageData(0,0,c.width,c.height).data;
+      const lum=new Uint8ClampedArray(c.width*c.height);
+      for(let i=0,j=0;i<lum.length;i++,j+=4)lum[i]=(d[j]*306+d[j+1]*601+d[j+2]*117)>>10;
+      const src=new Z.RGBLuminanceSource(lum,c.width,c.height);
+      const bmp=new Z.BinaryBitmap(new Z.HybridBinarizer(src));
+      const v=vinFromText(reader.decode(bmp).getText());
+      if(v)return v;
+    }catch(e){/* not found at this size/rotation */}
+  }
+  return "";
+}
+async function scanVin(input){
+  const file=input.files&&input.files[0];input.value="";if(!file)return;
+  const m=$("#vinmsg");m.className="vinmsg busy";m.textContent="Looking for a barcode…";
+  let vin="",how="";
+  try{
+    const url=URL.createObjectURL(file);
+    const img=await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=url});
+    await new Promise(r=>setTimeout(r,30));
+    vin=readBarcode(img);URL.revokeObjectURL(url);how="barcode";
+  }catch(e){}
+  if(!vin){m.className="vinmsg bad";m.textContent="No VIN barcode found. Try again with the barcode filling most of the frame, or type the VIN.";return}
+  applyScan(vin);
+}
+function applyScan(vin){
+  const m=$("#vinmsg");
+  cur.vin=vin;$("#vin").value=vin;save();vinStatus();fillFromVin(false);
+  const okd=checkDigitOk(vin);
+  m.className="vinmsg "+(okd?"good":"bad");
+  m.textContent="Scanned from barcode. "+(okd?"VIN checks out.":"Check digit doesn't match. Compare it with the car before saving.");
+}
+window.onNativeScan=(text,why)=>{
+  if(!cur||!$("#vinmsg"))return;
+  const m=$("#vinmsg");
+  if(why==="no-camera"){m.className="vinmsg bad";m.textContent="Camera access is off. Turn it on in Settings > Apps > Car Inspection, or type the VIN.";return}
+  if(!text){vinStatus();return}
+  const vin=vinFromText(text);
+  if(!vin){m.className="vinmsg bad";m.textContent="That barcode isn't a VIN. Try the barcode on the door jamb sticker.";return}
+  applyScan(vin);
+};
+window.androidBack=()=>{if(!$("#viewer").hidden){$("#viewer").hidden=true;return true}if(cur){showList();return true}return false};
+
+/* ---------- export ---------- */
+async function exportFile(){
+  const btn=$("#export");btn.disabled=true;btn.textContent="Preparing file…";
+  try{
+    clearTimeout(saveT);await store.put(structuredClone(cur)).catch(()=>{});
+    const c=counts(cur);
+    const photos=[];let n=0;
+    const addP=async(id,point)=>{const p=photoMap.get(id);if(!p)return;n++;photos.push({point,filename:`${(cur.vin||"car").slice(-6)}_${pad(n)}.jpg`,data:await blobTo64(p.blob)})};
+    const items={};
+    for(const p of POINTS){const it=cur.items[p];items[p]={status:it.status,note:it.note.trim()};for(const id of it.photos)await addP(id,p)}
+    for(const id of cur.photos)await addP(id,"");
+    const payload={format:"car-inspection",version:1,exported:stamp(),
+      vehicle:{vin:cur.vin,year:cur.year,make:cur.make,model:cur.model,trim:cur.trim,color:cur.color,mileage:cur.mileage},
+      inspection:{date:cur.created,items,comments:cur.comments.trim()},photos};
+    const d=new Date();const fname=`inspection_${cur.vin?cur.vin.slice(-6):"novin"}_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.json`;
+    if(c.left&&!btn.dataset.confirmed){btn.dataset.confirmed="1";btn.disabled=false;btn.textContent=`${c.left} points unchecked. Tap to export anyway`;setTimeout(()=>{if(btn.isConnected){delete btn.dataset.confirmed;btn.textContent="Export for PC"}},5000);return}
+    delete btn.dataset.confirmed;btn.textContent="Preparing file…";
+    if(window.AndroidBridge){
+      AndroidBridge.shareFile(fname,JSON.stringify(payload));
+      cur.exported=stamp();await store.put(structuredClone(cur)).catch(()=>{});
+      toast("Pick Drive or Files to save it to your cloud folder.");return;
+    }
+    const file=new File([JSON.stringify(payload)],fname,{type:"application/json"});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      await navigator.share({files:[file],title:fname});
+    }else{
+      const a=document.createElement("a");a.href=URL.createObjectURL(file);a.download=fname;document.body.appendChild(a);a.click();
+      setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
+    }
+    cur.exported=stamp();await store.put(structuredClone(cur)).catch(()=>{});
+    toast("Exported. Save it to your cloud folder.");
+  }catch(e){
+    toast(e&&e.name==="AbortError"?"Export cancelled":"Couldn't export. Try again.");
+  }finally{if(btn.isConnected&&!btn.dataset.confirmed){btn.disabled=false;btn.textContent="Export for PC"}else if(btn.isConnected)btn.disabled=false}
+}
+
+openDB().then(showList);
+</script>
+</body>
+</html>
